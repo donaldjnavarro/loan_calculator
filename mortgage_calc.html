@@ -38,7 +38,7 @@
     <div>
         <h1>Loan Calculator</h1>
 
-        <!-- Calling Calculate function defined in app.js -->
+        <!-- Primary fields -->
         <p>Sale Price (in thousands):
             <input id="sale_price" type="number" placeholder="1" min="1" onchange="calculate()">
         </p>
@@ -55,18 +55,23 @@
             <input id="monthly_payment" type="number" placeholder="1" min="1" step="1" onchange="calculate()">
         </p>
 
+        <!-- Primary results -->
         <h3 id="interest_paid"></h3>
         <h3 id="payments_required"></h3>
 
+        <!-- Optional Payment Comparisons -->
         <p>
             <br>
             <h2>Optional One-Time Payment:</h2>
-            <input id="optional_payment" type="number" placeholder="0" min="1" step="1" onchange="calculate()">
+            <input id="optional_one_time_payment" type="number" placeholder="0" min="1" step="1" onchange="calculate()">
+            <h2>Optional Monthly Payment Increase:</h2>
+            <input id="optional_monthly_payment" type="number" placeholder="0" min="1" step="1" onchange="calculate()">
         </p>
-        <h3 id="interest_paid_with_optional_payment"></h3>
-        <h3 id="payments_required_with_optional_payment"></h3>
-        <h3 id="money_saved"></h3>
+        <h3 id="interest_paid_with_optional_payments"></h3>
+        <h3 id="payments_required_with_optional_payments"></h3>
+        <h3 id="money_saved_with_optional_payments"></h3>
 
+        <!-- Validation -->
         <h1 id="error_message"></h1>
     </div>
 </body>
@@ -78,18 +83,19 @@
     <script>
         function calculate () {
             // User inputs
-            const mortgageRate = (document.querySelector('#interest_rate').value / 100);
-            const salePrice = (document.querySelector('#sale_price').value * 1000);
-            const downPayment = (document.querySelector('#down_payment').value * 1000);
-            const optionalPayment = (document.querySelector('#optional_payment').value);
-            const monthlyPayment = (document.querySelector('#monthly_payment').value);
-            
-            function doPayment (principal) {
+            const interestRate = Number(document.querySelector('#interest_rate').value / 100);
+            const salePrice = Number(document.querySelector('#sale_price').value * 1000);
+            const downPayment = Number(document.querySelector('#down_payment').value * 1000);
+            const optionalOneTimePayment = Number(document.querySelector('#optional_one_time_payment').value);
+            const monthlyPayment = Number((document.querySelector('#monthly_payment').value));
+            const optionalMonthlyPayment = Number(document.querySelector('#optional_monthly_payment').value);
+
+            function doPayment (principal, monthlyPayment) {
                 let paymentCount = 0;
                 let interestPaid = 0;
                 while (principal > 0) {
                     paymentCount += 1;
-                    const interest = principal * (mortgageRate / 12);
+                    const interest = principal * (interestRate / 12);
                     interestPaid += interest;
                     principal = principal - (monthlyPayment - interest);
 
@@ -104,11 +110,12 @@
 
             let error = false;
             let principal = salePrice - downPayment;
-            // Primary payment cycle
-            const { interestPaid, paymentCount } = doPayment(principal)
 
-            // Alternate payment cycle
-            alternatePayment = doPayment(principal - optionalPayment)
+            // Calculate with just base payments
+            const { interestPaid, paymentCount } = doPayment(principal, monthlyPayment)
+
+            // Calculate with optional one time payment cycle
+            optionalPayments = doPayment(principal - optionalOneTimePayment, monthlyPayment + optionalMonthlyPayment)
 
             // Print the results
             if (error) {
@@ -119,9 +126,9 @@
                 // Blank all other messaging while in error state
                 document.querySelector("#interest_paid").innerHTML = '';
                 document.querySelector("#payments_required").innerHTML = '';
-                document.querySelector("#interest_paid_with_optional_payment").innerHTML = '';
-                document.querySelector("#payments_required_with_optional_payment").innerHTML = '';
-                document.querySelector("#money_saved").innerHTML = '';
+                document.querySelector("#interest_paid_with_optional_payments").innerHTML = '';
+                document.querySelector("#payments_required_with_optional_payments").innerHTML = '';
+                document.querySelector("#money_saved_with_optional_payments").innerHTML = '';
 
             } else {
                 // Primary results
@@ -131,13 +138,13 @@
                 document.querySelector("#payments_required")
                     .innerHTML = `Paid in full in ${(paymentCount / 12).toFixed(1)} years`;
 
-                // Optional payment results
-                document.querySelector("#interest_paid_with_optional_payment")
-                    .innerHTML = "Total interest paid: $" + new Intl.NumberFormat('en-US').format(alternatePayment.interestPaid.toFixed(2).toLocaleString());
-                document.querySelector("#payments_required_with_optional_payment")
-                    .innerHTML = `Paid in full in ${(alternatePayment.paymentCount / 12).toFixed(1)} years`;
-                document.querySelector("#money_saved")
-                    .innerHTML = "Interest saved by optional payment: $" + new Intl.NumberFormat('en-US').format((interestPaid - alternatePayment.interestPaid).toFixed(2).toLocaleString());
+                // Optional one-time payment results
+                document.querySelector("#interest_paid_with_optional_payments")
+                    .innerHTML = "Total interest paid: $" + new Intl.NumberFormat('en-US').format(optionalPayments.interestPaid.toFixed(2).toLocaleString());
+                document.querySelector("#payments_required_with_optional_payments")
+                    .innerHTML = `Paid in full in ${(optionalPayments.paymentCount / 12).toFixed(1)} years`;
+                document.querySelector("#money_saved_with_optional_payments")
+                    .innerHTML = "Interest saved by optional payment: $" + new Intl.NumberFormat('en-US').format((interestPaid - optionalPayments.interestPaid).toFixed(2).toLocaleString());
 
                 // Validation message
                 document.querySelector("#error_message").innerHTML = `${''}`;
