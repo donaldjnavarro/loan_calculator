@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <style>
+        body {
+            background-color: black;
+            font-family: 'Trebuchet MS';
+            color: white;
+            /* content size */
+            width: 400px;
+            height: 450px;
+            /* content centering */
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translateX(-50%) translateY(-50%);
+            padding: 20px 20px 100px 100px;
+            /* border-radius: 50px; */
+        }
+        h1 {
+            font-size: 35px;
+        }
+        h1 {
+            font-size: 21px;
+            margin-top: 20px;
+        }
+        input {
+            padding: 7px;
+            width: 70%;
+            margin-top: 7px;
+        }
+    
+        </style>
+    <title>Loan Calculator</title>
+</head>
+
+<body>
+    <div>
+        <h1>Loan Calculator</h1>
+
+        <!-- Calling Calculate function defined in app.js -->
+        <p>Sale Price (in thousands):
+            <input id="sale_price" type="number" placeholder="1" min="1" onchange="calculate()">
+        </p>
+
+        <p>Interest Rate %:
+            <input id="interest_rate" type="number" placeholder="0" min="0" step="0.1" onchange="calculate()">
+        </p>
+
+        <p>Down Payment (in thousands):
+            <input id="down_payment" type="number" placeholder="0" min="0" step="1" onchange="calculate()">
+        </p>
+
+        <p>Current Payment:
+            <input id="current_payment" type="number" placeholder="0" min="1" step="1" onchange="calculate()">
+        </p>
+
+        <p>Monthly Payment:
+            <input id="monthly_payment" type="number" placeholder="1" min="1" step="1" onchange="calculate()">
+        </p>
+
+        <h2 id="error_message"></h2>
+
+        <h2 id="interest_paid"></h2>
+        <h2 id="payments_required"></h2>
+        <h2 id="money_saved"></h2>
+    </div>
+</body>
+
+</html>
+
+<body>
+    <div class="container">
+    <script>
+        function calculate () {
+            // User inputs
+            const mortgageRate = (document.querySelector('#interest_rate').value / 100);
+            const salePrice = (document.querySelector('#sale_price').value * 1000);
+            const downPayment = (document.querySelector('#down_payment').value * 1000);
+            const currentPayment = (document.querySelector('#current_payment').value);
+            const monthlyPayment = (document.querySelector('#monthly_payment').value);
+            
+            function doPayment (principal) {
+                let paymentCount = 0;
+                let interestPaid = 0;
+                while (principal > 0) {
+                    paymentCount += 1;
+                    const interest = principal * (mortgageRate / 12);
+                    interestPaid += interest;
+                    principal = principal - (monthlyPayment - interest);
+
+                    // If the user hasnt finished inputting values or puts in bad values, just wait for them to correct it
+                    if ((monthlyPayment - interest) <= 0) {
+                        error = true;
+                        break;
+                    }
+                }
+                return { interestPaid, paymentCount }
+            }
+
+            let error = false;
+            let principal = salePrice - downPayment - currentPayment;
+            // Primary payment cycle
+            const { interestPaid, paymentCount } = doPayment(principal)
+
+            // Alternate payment cycle
+            alternatePayment = doPayment(principal - currentPayment)
+            console.log(JSON.stringify(alternatePayment))
+
+            if (error) {
+                document.querySelector("#error_message")
+                    .innerHTML = `${'Invalid math: Please correct inputs'}`;
+
+                document.querySelector("#interest_paid").innerHTML = '';
+                document.querySelector("#payments_required").innerHTML = '';
+            } else {
+                document.querySelector("#interest_paid")
+                    .innerHTML = "Interest Paid: $" + new Intl.NumberFormat('en-US').format(interestPaid.toFixed(2).toLocaleString());
+
+                const yearsUntilPaid = paymentCount / 12;
+                document.querySelector("#payments_required")
+                    .innerHTML = `Paid in: ${yearsUntilPaid.toFixed(1)} years`;
+
+                document.querySelector("#money_saved")
+                    .innerHTML = "Interest saved by optional payment: $" + new Intl.NumberFormat('en-US').format((alternatePayment.interestPaid - interestPaid).toFixed(2).toLocaleString());
+
+                document.querySelector("#error_message").innerHTML = `${''}`;
+            }
+    
+        }
+
+
+            // // Create a chart using Plotly.js library
+            // // NOTE: We repeat the first point at the end to create a closing line
+            // var data = [
+            //     {
+            //         // x: [...Object.keys(magic), Object.keys(magic)[0]],
+            //         // y: [...Object.values(magic), Object.values(magic)[0]],
+            //         theta: [...Object.keys(magic), Object.keys(magic)[0]],
+            //         r: [...Object.values(magic), Object.values(magic)[0]],
+            //         type: "scatterpolar",
+            //         fill: 'toself',
+            //     },
+            // ];
+            
+            // const layout = {
+            //     polar: {
+            //         radialaxis: {
+            //         visible: true, // Displays grid lines
+            //         range: [0, 10]
+            //         }
+            //     }
+            // };
+            
+            // Plotly.newPlot("chart", data, layout);
+        // createChart();
+    </script>
+</body>
+</html>
