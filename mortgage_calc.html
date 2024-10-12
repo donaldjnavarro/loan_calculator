@@ -13,8 +13,7 @@
             /* content centering */
             position: absolute;
             left: 50%;
-            top: 50%;
-            transform: translateX(-50%) translateY(-50%);
+            transform: translateX(-50%);
             padding: 20px 20px 100px 100px;
             /* border-radius: 50px; */
         }
@@ -52,19 +51,23 @@
             <input id="down_payment" type="number" placeholder="0" min="0" step="1" onchange="calculate()">
         </p>
 
-        <p>Current Payment:
-            <input id="current_payment" type="number" placeholder="0" min="1" step="1" onchange="calculate()">
-        </p>
-
         <p>Monthly Payment:
             <input id="monthly_payment" type="number" placeholder="1" min="1" step="1" onchange="calculate()">
         </p>
 
-        <h2 id="error_message"></h2>
+        <h3 id="interest_paid"></h3>
+        <h3 id="payments_required"></h3>
 
-        <h2 id="interest_paid"></h2>
-        <h2 id="payments_required"></h2>
-        <h2 id="money_saved"></h2>
+        <p>
+            <br>
+            <h2>Optional One-Time Payment:</h2>
+            <input id="optional_payment" type="number" placeholder="0" min="1" step="1" onchange="calculate()">
+        </p>
+        <h3 id="interest_paid_with_optional_payment"></h3>
+        <h3 id="payments_required_with_optional_payment"></h3>
+        <h3 id="money_saved"></h3>
+
+        <h1 id="error_message"></h1>
     </div>
 </body>
 
@@ -78,7 +81,7 @@
             const mortgageRate = (document.querySelector('#interest_rate').value / 100);
             const salePrice = (document.querySelector('#sale_price').value * 1000);
             const downPayment = (document.querySelector('#down_payment').value * 1000);
-            const currentPayment = (document.querySelector('#current_payment').value);
+            const optionalPayment = (document.querySelector('#optional_payment').value);
             const monthlyPayment = (document.querySelector('#monthly_payment').value);
             
             function doPayment (principal) {
@@ -100,32 +103,43 @@
             }
 
             let error = false;
-            let principal = salePrice - downPayment - currentPayment;
+            let principal = salePrice - downPayment;
             // Primary payment cycle
             const { interestPaid, paymentCount } = doPayment(principal)
 
             // Alternate payment cycle
-            alternatePayment = doPayment(principal - currentPayment)
-            console.log(JSON.stringify(alternatePayment))
+            alternatePayment = doPayment(principal - optionalPayment)
 
             // Print the results
             if (error) {
+                // Validation message
                 document.querySelector("#error_message")
-                    .innerHTML = `${'Invalid math: Please correct inputs'}`;
+                    .innerHTML = `${'Invalid math: Please adjust inputs'}`;
 
+                // Blank all other messaging while in error state
                 document.querySelector("#interest_paid").innerHTML = '';
                 document.querySelector("#payments_required").innerHTML = '';
+                document.querySelector("#interest_paid_with_optional_payment").innerHTML = '';
+                document.querySelector("#payments_required_with_optional_payment").innerHTML = '';
+                document.querySelector("#money_saved").innerHTML = '';
+
             } else {
+                // Primary results
                 document.querySelector("#interest_paid")
-                    .innerHTML = "Interest Paid: $" + new Intl.NumberFormat('en-US').format(interestPaid.toFixed(2).toLocaleString());
+                    .innerHTML = "Total interest paid: $" + new Intl.NumberFormat('en-US').format(interestPaid.toFixed(2).toLocaleString());
 
-                const yearsUntilPaid = paymentCount / 12;
                 document.querySelector("#payments_required")
-                    .innerHTML = `Paid in: ${yearsUntilPaid.toFixed(1)} years`;
+                    .innerHTML = `Paid in full in ${(paymentCount / 12).toFixed(1)} years`;
 
+                // Optional payment results
+                document.querySelector("#interest_paid_with_optional_payment")
+                    .innerHTML = "Total interest paid: $" + new Intl.NumberFormat('en-US').format(alternatePayment.interestPaid.toFixed(2).toLocaleString());
+                document.querySelector("#payments_required_with_optional_payment")
+                    .innerHTML = `Paid in full in ${(alternatePayment.paymentCount / 12).toFixed(1)} years`;
                 document.querySelector("#money_saved")
                     .innerHTML = "Interest saved by optional payment: $" + new Intl.NumberFormat('en-US').format((interestPaid - alternatePayment.interestPaid).toFixed(2).toLocaleString());
 
+                // Validation message
                 document.querySelector("#error_message").innerHTML = `${''}`;
             }
     
