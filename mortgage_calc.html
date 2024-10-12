@@ -108,6 +108,7 @@
             alternatePayment = doPayment(principal - currentPayment)
             console.log(JSON.stringify(alternatePayment))
 
+            // Print the results
             if (error) {
                 document.querySelector("#error_message")
                     .innerHTML = `${'Invalid math: Please correct inputs'}`;
@@ -123,7 +124,7 @@
                     .innerHTML = `Paid in: ${yearsUntilPaid.toFixed(1)} years`;
 
                 document.querySelector("#money_saved")
-                    .innerHTML = "Interest saved by optional payment: $" + new Intl.NumberFormat('en-US').format((alternatePayment.interestPaid - interestPaid).toFixed(2).toLocaleString());
+                    .innerHTML = "Interest saved by optional payment: $" + new Intl.NumberFormat('en-US').format((interestPaid - alternatePayment.interestPaid).toFixed(2).toLocaleString());
 
                 document.querySelector("#error_message").innerHTML = `${''}`;
             }
