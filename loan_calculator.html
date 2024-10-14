@@ -44,6 +44,14 @@
                 margin-top: 7px;
             }
 
+            .calculated_value {
+                color: white
+            }
+
+            .validation {
+                color: red
+            }
+
             /* Responsive layout - makes the three columns stack on top of each other instead of next to each other */
             @media screen and (max-width: 600px) {
                 .column {
@@ -61,6 +69,9 @@
                 <!-- Base payments -->
                 <h2>Base payments</h2>
 
+                <!-- Validation -->
+                <p class = 'validation' id="error_message"></p>
+
                 <p>Sale Price (in thousands):</p>
                 <input id="sale_price" type="number" placeholder="1" min="1" onchange="calculate()">
 
@@ -70,19 +81,21 @@
                 <p>Down Payment (in thousands):</p>
                 <input id="down_payment" type="number" placeholder="0" min="0" step="1" onchange="calculate()">
 
-                <p>Monthly Payment:</p>
+                <p>Estimated monthly payments:</p>
+                <li class='calculated_value' id="ten_year_payments">10y estimate pending inputs</li>
+                <li class='calculated_value' id="fifteen_year_payments">15y estimate pending inputs</li>
+                <li class='calculated_value' id="twenty_year_payments">20y estimate pending inputs</li>
+                <li class='calculated_value' id="thirty_year_payments">30y estimate pending inputs</li>
+
+                <p>Actual monthly payment:</p>
                 <input id="monthly_payment" type="number" placeholder="1" min="1" step="1" onchange="calculate()">
 
                 <!-- Primary results -->
                 <p>Total interest paid:</p>
-                <h3 id="interest_paid"></h3>
+                <h3 class='calculated_value' id="interest_paid"></h3>
                 <p>Paid in full in:</p>
-                <h3 id="payments_required"></h3>
-                <p>Estimated monthly payments:</p>
-                <p id="ten_year_payments"></p>
-                <p id="fifteen_year_payments"></p>
-                <p id="twenty_year_payments"></p>
-                <p id="thirty_year_payments"></p>
+                <h3 class='calculated_value' id="payments_required"></h3>
+
             </div>
 
             <!-- Center rail -->
@@ -91,24 +104,25 @@
                 <h2>Optional payments</h2>
 
                 <p>Optional One-Time Payment:</p>
-                <input id="optional_one_time_payment" type="number" placeholder="0" min="1" step="1" onchange="calculate()">
+                <input id="optional_one_time_payment" type="number" placeholder="0" min="0" step="1" onchange="calculate()">
                 
                 <p>Optional Monthly Payment Increase:</p>
-                <input id="optional_monthly_payment" type="number" placeholder="0" min="1" step="1" onchange="calculate()">
-                
-                <p>Total interest paid:</p>
-                <h3 id="interest_paid_with_optional_payments"></h3>
-                <p>Paid in full in:</p>
-                <h3 id="payments_required_with_optional_payments"></h3>
+                <input id="optional_monthly_payment" type="number" placeholder="0" min="0" step="1" onchange="calculate()">
 
-                <p>Interest saved by optional payment:</p>
-                <h3 id="money_saved_with_optional_payments"></h3>
+                <p>Alternate Interest %:</p>
+                <input id="alternate_interest_rate" type="number" placeholder="0" min="0" step="0.1" onchange="calculate()">
+
+                <p>Total interest paid:</p>
+                <h3 class='calculated_value' id="interest_paid_with_optional_payments"></h3>
+                <p>Paid in full in:</p>
+                <h3 class='calculated_value' id="payments_required_with_optional_payments"></h3>
+
+                <p>Interest saved:</p>
+                <h3 class='calculated_value' id="money_saved_with_optional_payments"></h3>
             </div>
 
             <!-- Right Rail -->
             <div class = 'chart-column' id = rightrail>
-                <!-- Validation -->
-                <h1 id="error_message"></h1>
                 <div id="interest_chart"></div>
                 <div id="savings_chart"></div>
             </div>
@@ -118,27 +132,27 @@
         function calculate () {
             // User inputs
             const salePrice = Number(document.querySelector('#sale_price').value * 1000);
-            const interestRate = Number(document.querySelector('#interest_rate').value / 100);
-            const interestMonthlyRate = (interestRate / 12);
+            const interestRate = Number(document.querySelector('#interest_rate').value / 100) / 12;
             const downPayment = Number(document.querySelector('#down_payment').value * 1000);
             const optionalOneTimePayment = Number(document.querySelector('#optional_one_time_payment').value);
             const monthlyPayment = Number((document.querySelector('#monthly_payment').value));
             const optionalMonthlyPayment = Number(document.querySelector('#optional_monthly_payment').value);
+            const alternateInterestRate = Number(document.querySelector('#alternate_interest_rate').value / 100) / 12;
             let principal = salePrice - downPayment;
             let error = false;
 
             function estimateMonthlyPayment (principal, years) {
-                const r = interestMonthlyRate;
+                const r = interestRate;
                 const P = principal;
                 const months =  ( years * 12 );
                 return (
-                    (interestMonthlyRate * principal) 
+                    (interestRate * principal) 
                     / 
-                    (1 - (1 + interestMonthlyRate) ** (0 - months))
+                    (1 - (1 + interestRate) ** (0 - months))
                 ).toFixed(2);
             }
 
-            function doPayment (principal, monthlyPayment) {
+            function doPayment (principal, monthlyPayment, interestRate) {
                 let paymentCount = 0;
                 let interestPaid = 0;
                 const paymentHistory = {
@@ -151,7 +165,7 @@
                 while (principal > 0) {
                     // payment calculations
                     paymentCount += 1;
-                    const interest = principal * interestMonthlyRate;
+                    const interest = principal * interestRate;
                     interestPaid += interest;
                     const principalPayment = (monthlyPayment - interest);
                     principal = principal - principalPayment;
@@ -172,10 +186,14 @@
             }
 
             // Calculate with just base payments
-            const { interestPaid, paymentCount, paymentHistory } = doPayment(principal, monthlyPayment)
+            const { interestPaid, paymentCount, paymentHistory } = doPayment(principal, monthlyPayment, interestRate)
 
             // Calculate with optional one time payment cycle
-            optionalPayments = doPayment(principal - optionalOneTimePayment, monthlyPayment + optionalMonthlyPayment)
+            optionalPayments = doPayment(
+                principal - optionalOneTimePayment,
+                monthlyPayment + optionalMonthlyPayment,
+                alternateInterestRate > 0 ? alternateInterestRate : interestRate
+            )
 
             /** Print the results */
             if (error) {
@@ -184,15 +202,15 @@
                     .innerHTML = `${'Invalid math: Please adjust inputs'}`;
 
                 // Blank all other messaging while in error state
-                document.querySelector("#interest_paid").innerHTML = '';
-                document.querySelector("#payments_required").innerHTML = '';
-                document.querySelector("#interest_paid_with_optional_payments").innerHTML = '';
-                document.querySelector("#payments_required_with_optional_payments").innerHTML = '';
-                document.querySelector("#money_saved_with_optional_payments").innerHTML = '';
-                document.querySelector("#ten_year_payments").innerHTML = '';
-                document.querySelector("#fifteen_year_payments").innerHTML = '';
-                document.querySelector("#twenty_year_payments").innerHTML = '';
-                document.querySelector("#thirty_year_payments").innerHTML = '';
+                document.querySelector("#interest_paid").innerHTML;
+                document.querySelector("#payments_required").innerHTML;
+                document.querySelector("#interest_paid_with_optional_payments").innerHTML;
+                document.querySelector("#payments_required_with_optional_payments").innerHTML;
+                document.querySelector("#money_saved_with_optional_payments").innerHTML;
+                document.querySelector("#ten_year_payments").innerHTML;
+                document.querySelector("#fifteen_year_payments").innerHTML;
+                document.querySelector("#twenty_year_payments").innerHTML;
+                document.querySelector("#thirty_year_payments").innerHTML;
 
             } else {
                 // Primary results
@@ -221,86 +239,104 @@
                     .innerHTML = "$" + new Intl.NumberFormat('en-US').format((interestPaid - optionalPayments.interestPaid).toFixed(2).toLocaleString());
 
                 // Validation message
-                document.querySelector("#error_message").innerHTML = `${''}`;
+                document.querySelector("#error_message").innerHTML = '';
             }
 
-    /** Graphs! */
-    // Interest chart
-    Plotly.newPlot("interest_chart",
-        // Interest data
-        [
-            {
-                name: 'basic payments',
-                x: paymentHistory.paymentNumber,
-                y: paymentHistory.interestPayment,
-                // type: 'scatter'
-                mode: 'markers'
-            },
-            {
-                name: 'with optional payments',
-                x: optionalPayments.paymentHistory.paymentNumber,
-                y: optionalPayments.paymentHistory.interestPayment,
-                // type: 'scatter'
-                mode: 'markers'
+            /** Graphs! */
+            // Savings chart
+            const savingsPerMonth = [];
+            for (let i = 0; i < paymentHistory.paymentNumber.length; i++ ) {
+                // The last few months may be paid off, so the interest will be zero
+                optionalInterestPayment = optionalPayments.paymentHistory.interestPayment[i] ? optionalPayments.paymentHistory.interestPayment[i] : 0;
+                // Create a new array of savings
+                savingsPerMonth.push(paymentHistory.interestPayment[i] - optionalInterestPayment);
             }
-        ],
-        // Layout
-        {
-            title:'Interest payments each month',
-            xaxis: {
-                title: 'Number of payments',
-                showgrid: false,
-                // zeroline: false
-            },
-            yaxis: {
-                title: 'Interest paid per month',
-                showline: false,
-                zeroline: false
-            },
-            showlegend: true,
-            legend: {
-                // Overlay the graph to avoid forcing it to resize
-                x: 1,
-                xanchor: 'right',
-                y: 1,
-                // Transparent background
-                bgcolor: 'rgba(0,0,0,0)'
-            }
+            Plotly.newPlot("savings_chart",
+                // Savings data
+                [
+                    {
+                        name: 'interest saved',
+                        x: paymentHistory.paymentNumber,
+                        y: savingsPerMonth,
+                        // type: 'scatter'
+                        mode: 'markers',
+                        line: {
+                            color: 'purple'
+                        }
+                    }
+                ],
+                // Layout
+                {
+                    title: `Savings per month from optional payments`,
+                    xaxis: {
+                        title: '# of payments made',
+                        showgrid: false,
+                    },
+                    yaxis: {
+                        title: 'Interest saved per payment',
+                    },
+                    // No need to show legend with only 1 data set
+                    showlegend: false,
+                }
+            );
+
+            // Interest chart
+            Plotly.newPlot("interest_chart",
+                // Interest data
+                [
+                    {
+                        name: 'interest paid with basic payments',
+                        x: paymentHistory.paymentNumber,
+                        y: paymentHistory.interestPayment,
+                        // type: 'scatter'
+                        mode: 'markers',
+                        line: {
+                            color: 'green'
+                        }
+                    },
+                    {
+                        name: 'interest paid with optional payments',
+                        x: optionalPayments.paymentHistory.paymentNumber,
+                        y: optionalPayments.paymentHistory.interestPayment,
+                        mode: 'markers',
+                        line: {
+                            color: 'blue'
+                        }
+                    },
+                    {
+                        name: 'interest saved by optional payments',
+                        x: paymentHistory.paymentNumber,
+                        y: savingsPerMonth,
+                        mode: 'markers',
+                        line: {
+                            color: 'purple'
+                        }
+                    }
+                ],
+                // Layout
+                {
+                    title:'Interest payments each month',
+                    xaxis: {
+                        title: 'Number of payments',
+                        showgrid: false,
+                        // zeroline: false
+                    },
+                    yaxis: {
+                        title: 'Interest paid per month',
+                        showline: false,
+                        zeroline: false
+                    },
+                    showlegend: true,
+                    legend: {
+                        // Overlay the graph to avoid forcing it to resize
+                        x: 1,
+                        xanchor: 'right',
+                        y: 1,
+                        // Transparent background
+                        bgcolor: 'rgba(0,0,0,0)'
+                    }
+                }
+            )
         }
-    )
-    // Savings chart
-    const savingsPerMonth = [];
-    for (let i = 0; i < paymentHistory.paymentNumber.length; i++ ) {
-        // The last few months may be paid off, so the interest will be zero
-        optionalInterestPayment = optionalPayments.paymentHistory.interestPayment[i] ? optionalPayments.paymentHistory.interestPayment[i] : 0;
-        // Create a new array of savings
-        savingsPerMonth.push(paymentHistory.interestPayment[i] - optionalInterestPayment);
-    }
-    Plotly.newPlot("savings_chart",
-        // Savings data
-        [
-            {
-                name: 'with optional payments',
-                x: paymentHistory.paymentNumber,
-                y: savingsPerMonth,
-                // type: 'scatter'
-                mode: 'markers'
-            }
-        ],
-        // Layout
-        {
-            title: `Savings per month from optional payments`,
-            xaxis: {
-                title: '# of payments made',
-                showgrid: false,
-            },
-            yaxis: {
-                title: 'Interest saved per payment',
-            },
-            // No need to show legend with only 1 data set
-            showlegend: false,
-        }
-    );
-    }
     </script>
 </html>
