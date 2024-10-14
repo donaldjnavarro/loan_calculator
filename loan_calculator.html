@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <style>
         body {
             background-color: black;
@@ -25,7 +25,11 @@
             width: 70%;
             margin-top: 7px;
         }
-    
+        .container {
+            display: flex;
+            align-items: center;
+            padding: 10% 10% 10% 10%
+        }
         </style>
     <title>Loan Calculator</title>
 </head>
@@ -70,6 +74,8 @@
         <!-- Validation -->
         <h1 id="error_message"></h1>
     </div>
+    <div id="interest_chart"></div>
+    <div id="savings_chart"></div>
 </body>
 
 </html>
@@ -89,26 +95,40 @@
             function doPayment (principal, monthlyPayment) {
                 let paymentCount = 0;
                 let interestPaid = 0;
+                const paymentHistory = {
+                    paymentNumber: [],
+                    principalPayment: [],
+                    interestPayment: [],
+                    remainingPrincipal: [],
+                };
                 while (principal > 0) {
+                    // payment calculations
                     paymentCount += 1;
                     const interest = principal * (interestRate / 12);
                     interestPaid += interest;
-                    principal = principal - (monthlyPayment - interest);
+                    const principalPayment = (monthlyPayment - interest);
+                    principal = principal - principalPayment;
 
                     // If the user hasnt finished inputting values or puts in bad values, just wait for them to correct it
                     if ((monthlyPayment - interest) <= 0) {
                         error = true;
                         break;
                     }
+
+                    // data for graphs
+                    paymentHistory.paymentNumber.push(paymentCount);
+                    paymentHistory.principalPayment.push(principalPayment);
+                    paymentHistory.interestPayment.push(interest);
+                    paymentHistory.remainingPrincipal.push(principal);
                 }
-                return { interestPaid, paymentCount }
+                return { interestPaid, paymentCount, paymentHistory }
             }
 
             let error = false;
             let principal = salePrice - downPayment;
 
             // Calculate with just base payments
-            const { interestPaid, paymentCount } = doPayment(principal, monthlyPayment)
+            const { interestPaid, paymentCount, paymentHistory } = doPayment(principal, monthlyPayment)
 
             // Calculate with optional one time payment cycle
             optionalPayments = doPayment(principal - optionalOneTimePayment, monthlyPayment + optionalMonthlyPayment)
@@ -145,9 +165,85 @@
                 // Validation message
                 document.querySelector("#error_message").innerHTML = `${''}`;
             }
-    
-        }
 
+    /** Graphs! */
+    // Interest chart
+    Plotly.newPlot("interest_chart",
+        // Interest data
+        [
+            {
+                name: 'basic payments',
+                x: paymentHistory.paymentNumber,
+                y: paymentHistory.interestPayment,
+                // type: 'scatter'
+                mode: 'markers'
+            },
+            {
+                name: 'with optional payments',
+                x: optionalPayments.paymentHistory.paymentNumber,
+                y: optionalPayments.paymentHistory.interestPayment,
+                // type: 'scatter'
+                mode: 'markers'
+            }
+        ],
+        // Layout
+        {
+            title:'Interest payments each month',
+            xaxis: {
+                title: 'Number of payments',
+                showgrid: false,
+                // zeroline: false
+            },
+            yaxis: {
+                title: 'Interest paid per month',
+                showline: false,
+                zeroline: false
+            },
+            showlegend: true,
+            legend: {
+                // Overlay the graph to avoid forcing it to resize
+                x: 1,
+                xanchor: 'right',
+                y: 1,
+                // Transparent background
+                bgcolor: 'rgba(0,0,0,0)'
+            }
+        }
+    )
+    // Savings chart
+    const savingsPerMonth = [];
+    for (let i = 0; i < paymentHistory.paymentNumber.length; i++ ) {
+        // The last few months may be paid off, so the interest will be zero
+        optionalInterestPayment = optionalPayments.paymentHistory.interestPayment[i] ? optionalPayments.paymentHistory.interestPayment[i] : 0;
+        // Create a new array of savings
+        savingsPerMonth.push(paymentHistory.interestPayment[i] - optionalInterestPayment);
+    }
+    Plotly.newPlot("savings_chart",
+        // Savings data
+        [
+            {
+                name: 'with optional payments',
+                x: paymentHistory.paymentNumber,
+                y: savingsPerMonth,
+                // type: 'scatter'
+                mode: 'markers'
+            }
+        ],
+        // Layout
+        {
+            title: `Savings per month from optional payments`,
+            xaxis: {
+                title: '# of payments made',
+                showgrid: false,
+            },
+            yaxis: {
+                title: 'Interest saved per payment',
+            },
+            // No need to show legend with only 1 data set
+            showlegend: false,
+        }
+    );
+    }
     </script>
 </body>
 </html>
